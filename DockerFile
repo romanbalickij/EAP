@@ -1,5 +1,11 @@
+# =========================
+# Base image
+# =========================
 FROM php:8.5-apache
 
+# =========================
+# Arguments
+# =========================
 ARG GITHUB_TOKEN
 WORKDIR /var/www
 
@@ -10,7 +16,7 @@ RUN apt-get update && apt-get install -y \
     git zip unzip cron supervisor \
     libzip-dev libpng-dev libjpeg-dev libfreetype6-dev \
     libldap2-dev libonig-dev libevent-dev \
-    libzmq3-dev unixodbc-dev libaio1 \
+    unixodbc-dev \
     ca-certificates curl gnupg \
  && rm -rf /var/lib/apt/lists/*
 
@@ -30,18 +36,18 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     sockets
 
 # =========================
-# PECL extensions (8.5-safe)
+# PECL extensions
 # =========================
-RUN pecl install redis xdebug event zmq \
- && docker-php-ext-enable redis xdebug event zmq
+RUN pecl install redis xdebug \
+ && docker-php-ext-enable redis xdebug
 
 # =========================
-# Apache
+# Apache modules
 # =========================
 RUN a2enmod rewrite
 
 # =========================
-# App
+# Copy application
 # =========================
 COPY . /var/www
 
@@ -52,12 +58,6 @@ RUN curl -sS https://getcomposer.org/installer | php \
  && php composer.phar config -g github-oauth.github.com "$GITHUB_TOKEN" \
  && php composer.phar install --no-interaction --prefer-dist
 
-# =========================
-# Cron
-# =========================
-COPY docker/cron/root /etc/cron.d/laravel
-RUN chmod 0644 /etc/cron.d/laravel \
- && crontab /etc/cron.d/laravel
 
 # =========================
 # Ports
@@ -65,6 +65,9 @@ RUN chmod 0644 /etc/cron.d/laravel \
 EXPOSE 80 6001 6004
 
 # =========================
-# Start
+# Entrypoint
 # =========================
+COPY docker/run.sh /var/www/docker/run.sh
+RUN chmod +x /var/www/docker/run.sh
+
 ENTRYPOINT ["/var/www/docker/run.sh"]
