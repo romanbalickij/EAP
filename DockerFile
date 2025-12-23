@@ -16,8 +16,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     git \
     zip \
     unzip \
-    cron \
-    supervisor \
     libzip-dev \
     libpng-dev \
     libjpeg-dev \
@@ -36,23 +34,11 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 # =========================
 # PHP extensions (core)
 # =========================
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
- && docker-php-ext-install \
-    mysqli \
-    pdo_mysql \
-    bcmath \
-    mbstring \
-    zip \
-    gd \
-    ldap \
-    pcntl \
-    sockets
-
-# =========================
-# PECL extensions
-# =========================
-RUN pecl install xdebug redis \
- && docker-php-ext-enable xdebug redis
+RUN docker-php-ext-install mysqli pdo_mysql bcmath mbstring zip
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg
+RUN docker-php-ext-install gd
+RUN docker-php-ext-install ldap
+RUN docker-php-ext-install pcntl sockets
 
 # =========================
 # Apache
@@ -103,19 +89,11 @@ COPY . /var/www
 RUN chmod -R 777 /var/www
 
 # =========================
-# Cron
-# =========================
-COPY docker/cron/root /etc/cron.d/laravel
-RUN chmod 0644 /etc/cron.d/laravel \
- && crontab /etc/cron.d/laravel \
- && touch /var/log/cron.log
-
-# =========================
 # Ports
 # =========================
 EXPOSE 80 6001 6004
 
 # =========================
-# Start Apache + Cron
+# Start Apache
 # =========================
-CMD service cron start && apache2-foreground
+CMD ["apache2-foreground"]
