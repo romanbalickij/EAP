@@ -4,7 +4,7 @@
 FROM php:8.5-apache
 
 # =========================
-# Arguments & Working Dir
+# Working Dir
 # =========================
 WORKDIR /var/www
 
@@ -28,62 +28,35 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     gnupg \
     wget \
     locales \
-   || true
+ && rm -rf /var/lib/apt/lists/*
 
 # =========================
-# PHP extensions (core, по одному для зменшення пам'яті)
+# PHP extensions (core)
 # =========================
-RUN docker-php-ext-install mysqli
-RUN docker-php-ext-install pdo_mysql
-RUN docker-php-ext-install bcmath
-RUN docker-php-ext-install mbstring
-RUN docker-php-ext-install zip
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg
-RUN docker-php-ext-install gd
-RUN docker-php-ext-install ldap
-RUN docker-php-ext-install pcntl
-RUN docker-php-ext-install sockets
+RUN docker-php-ext-install mysqli \
+ && docker-php-ext-install pdo_mysql \
+ && docker-php-ext-install bcmath \
+ && docker-php-ext-install mbstring \
+ && docker-php-ext-install zip \
+ && docker-php-ext-configure gd --with-freetype --with-jpeg \
+ && docker-php-ext-install gd \
+ && docker-php-ext-install ldap \
+ && docker-php-ext-install pcntl \
+ && docker-php-ext-install sockets
 
 # =========================
 # Apache
 # =========================
 RUN echo "ServerName localhost" > /etc/apache2/domain.conf \
-    && a2enmod rewrite
-
-# =========================
-# Oracle Instant Client
-# =========================
-COPY docker/oracle/ /tmp/oracle/
-RUN mkdir -p /opt/oracle \
-    && unzip /tmp/oracle/instantclient-basic-linux.x64-12.1.0.2.0.zip -d /opt/oracle \
-    && unzip /tmp/oracle/instantclient-sdk-linux.x64-12.1.0.2.0.zip -d /opt/oracle \
-    && ln -s /opt/oracle/instantclient_12_1/libclntsh.so.12.1 /opt/oracle/instantclient_12_1/libclntsh.so \
-    && ln -s /opt/oracle/instantclient_12_1/libocci.so.12.1 /opt/oracle/instantclient_12_1/libocci.so \
-    && echo /opt/oracle/instantclient_12_1 > /etc/ld.so.conf.d/oracle-instantclient.conf \
-    && ldconfig \
-    && echo 'instantclient,/opt/oracle/instantclient_12_1/' | pecl install oci8 \
-    && docker-php-ext-enable oci8 \
-    && docker-php-ext-configure pdo_oci --with-pdo-oci=instantclient,/opt/oracle/instantclient_12_1,12.1 \
-    && docker-php-ext-install pdo_oci \
-    && docker-php-ext-enable pdo_oci \
-    && rm -rf /tmp/oracle
-
-# =========================
-# SQL Server
-# =========================
-RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
-    && curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list \
-    && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y msodbcsql17 \
-    && pecl install sqlsrv-5.9.0 pdo_sqlsrv-5.9.0 \
-    && docker-php-ext-enable sqlsrv pdo_sqlsrv
+ && a2enmod rewrite
 
 # =========================
 # NodeJS & Composer
 # =========================
 RUN apt-get update && apt-get install -y nodejs npm \
-    && curl -sS https://getcomposer.org/installer | php \
-    && mv composer.phar /usr/local/bin/composer
+ && curl -sS https://getcomposer.org/installer | php \
+ && mv composer.phar /usr/local/bin/composer \
+ && rm -rf /var/lib/apt/lists/*
 
 # =========================
 # Copy app
